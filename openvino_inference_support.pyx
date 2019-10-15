@@ -22,21 +22,30 @@ ctypedef fused T:
 ctypedef T * t_point
 ctypedef float * f_point
 
-cdef extern from "CTensor.hpp":
-    cdef cppclass CTensor[float]:
+
+#cdef extern from "CTensor.hpp":
+cdef extern from "OpenVINOInferenceSupportive.hpp":
+    cdef cppclass CTensor[T]:
         CTensor(f_point _data, vector[size_t] _shape)
         CTensor(vector[size_t] _shape)
         printCTensor()
 
+
+cdef extern from "inference_engine/ie_iexecutable_network.hpp":
+    cdef cppclass ExecutableNetwork:
+        ExecutableNetwork()
+
 cdef extern from "OpenVINOInferenceSupportive.hpp":
     cdef cppclass OpenVINOInferenceSupportive:
-        long* loadOpenVINOIR(const string modelFilePath, const string weightFilePath, const int deviceType, const int batchSize)
-        CTensor[float] predict(long executable_network, CTensor datatensor)
+        @staticmethod
+        ExecutableNetwork* loadOpenVINOIR(const string modelFilePath, const string weightFilePath, const int deviceType, const int batchSize)
+        @staticmethod
+        CTensor[float] predict(ExecutableNetwork executable_network, CTensor[float] datatensor)
 
 def openvino_predict():
     cdef CTensor[float] *input
-    cdef CTensor *output
-    cdef long *model
+    cdef CTensor[float] *output
+    cdef ExecutableNetwork * model
     cdef int array_size = 1
     cdef vector[size_t] shape
     cdef float * array
@@ -51,8 +60,8 @@ def openvino_predict():
         for j in range(len(arr[0:(i+1)*BATCH_SIZE].flatten())):
             array[j] = arr[0:(i+1)*BATCH_SIZE].flatten()[j]
 
-        input = new CTensor(array, shape)
-        model = loadOpenVINOIR("/home/aqtjin/resnet_v1_50.xml", "/home/aqtjin/resnet_v1_50.bin", 0, 4)
-        predict(deref(model), deref(input)).printCTensor()
+        input = new CTensor[float](array, shape)
+        model = OpenVINOInferenceSupportive.loadOpenVINOIR("/home/aqtjin/resnet_v1_50.xml", "/home/aqtjin/resnet_v1_50.bin", 0, 4)
+        OpenVINOInferenceSupportive.predict(deref(model), deref(input))
 
 
