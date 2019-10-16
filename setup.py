@@ -19,6 +19,7 @@ ext_modules = [
         extra_compile_args=["-O3", "-Wno-cpp", "-Wno-unused-function", "-std=c++11"],
         library_dirs=[current_path, current_path + '/inference_engine'],
         language='c++',
+        libraries=["zoo_inference", "inference_engine", "cpu_extension"],
         runtime_library_dirs=[current_path],
         include_dirs=[numpy_include, current_path, current_path + '/inference_engine'],
         extra_link_args=["-std=c++11"]

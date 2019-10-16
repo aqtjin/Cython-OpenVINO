@@ -9,8 +9,8 @@ from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from cython.operator cimport dereference as deref
 
-BATCH_SIZE = 4
-arr = np.random.randint(0, 10, size = [32, 3, 224, 224])
+BATCH_SIZE = 1
+arr = np.random.randint(0, 255, size = [32, 3, 224, 224])
 
 ctypedef fused T:
     int
@@ -49,19 +49,23 @@ def openvino_predict():
     cdef int array_size = 1
     cdef vector[size_t] shape
     cdef float * array
+
+    model = OpenVINOInferenceSupportive.loadOpenVINOIR("/home/aqtjin/resnet_v1_50/resnet_v1_50.xml", "/home/aqtjin/resnet_v1_50/resnet_v1_50.bin", 0, 1)
+    print("Load successful")
+
+    print("Begin to predict")
     for i in range(arr.shape[0] // BATCH_SIZE):
         # From python array or ndarray to CTensor
-        for s in arr[0:(i+1)*BATCH_SIZE].shape:
+        for s in arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].shape:
             array_size *= s
             shape.push_back(s)
 
         array = <float *> malloc(array_size)
 
-        for j in range(len(arr[0:(i+1)*BATCH_SIZE].flatten())):
-            array[j] = arr[0:(i+1)*BATCH_SIZE].flatten()[j]
+        for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
+            array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
 
         input = new CTensor[float](array, shape)
-        model = OpenVINOInferenceSupportive.loadOpenVINOIR("/home/aqtjin/resnet_v1_50.xml", "/home/aqtjin/resnet_v1_50.bin", 0, 4)
+        print("run here")
         OpenVINOInferenceSupportive.predict(deref(model), deref(input))
-
-
+        print("Predict successful")
