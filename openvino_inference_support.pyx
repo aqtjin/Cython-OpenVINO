@@ -1,5 +1,7 @@
 # openvino_inference_support.pyx
 # distutils: language = c++
+# cython: language_level=3, boundscheck=False
+
 
 import numpy as np
 cimport numpy as np
@@ -22,6 +24,8 @@ ctypedef fused T:
 ctypedef T * t_point
 ctypedef float * f_point
 
+cdef char* model_path = "/home/aqtjin/resnet_v1_50/resnet_v1_50.xml"
+cdef char* model_bin = "/home/aqtjin/resnet_v1_50/resnet_v1_50.bin"
 
 #cdef extern from "CTensor.hpp":
 cdef extern from "OpenVINOInferenceSupportive.hpp":
@@ -50,22 +54,24 @@ def openvino_predict():
     cdef vector[size_t] shape
     cdef float * array
 
-    model = OpenVINOInferenceSupportive.loadOpenVINOIR("/home/aqtjin/resnet_v1_50/resnet_v1_50.xml", "/home/aqtjin/resnet_v1_50/resnet_v1_50.bin", 0, 1)
-    print("Load successful")
+    model = OpenVINOInferenceSupportive.loadOpenVINOIR(model_path, model_bin, 0, 1)
 
-    print("Begin to predict")
+    print("Begin to prepare data")
     for i in range(arr.shape[0] // BATCH_SIZE):
         # From python array or ndarray to CTensor
+        array_size = 1
         for s in arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].shape:
             array_size *= s
             shape.push_back(s)
-
-        array = <float *> malloc(array_size)
+        print(shape)
+        print("Array size " + str(array_size))
+        array = <float *> malloc(array_size * sizeof(float))
 
         for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
             array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
 
         input = new CTensor[float](array, shape)
-        print("run here")
+        free(array)
+        print("Begin here")
         OpenVINOInferenceSupportive.predict(deref(model), deref(input))
         print("Predict successful")
