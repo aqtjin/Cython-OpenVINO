@@ -1,0 +1,3 @@
+import openvino_inference_support
+
+openvino_inference_support.openvino_predict()
