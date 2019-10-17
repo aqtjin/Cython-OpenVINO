@@ -47,7 +47,7 @@ cdef extern from "OpenVINOInferenceSupportive.hpp":
         @staticmethod
         CTensor[float] predict(ExecutableNetwork executable_network, CTensor[float] datatensor)
 
-def openvino_predict():
+def openvino_predict(Loadedmodel):
     cdef CTensor[float] *input
     cdef CTensor[float] *output
     cdef ExecutableNetwork * model
@@ -55,9 +55,8 @@ def openvino_predict():
     cdef vector[size_t] shape
     cdef float [::1] array
 
-    # Load Model
-    model = OpenVINOInferenceSupportive.loadOpenVINOIR(model_path, model_bin, 0, 1)
-
+    cdef unsigned long ptr = Loadedmodel
+    model = <ExecutableNetwork *> ptr
     # Create CTensor Shape
     for s in arr[0:1*BATCH_SIZE].shape:
         shape.push_back(s)
@@ -73,7 +72,12 @@ def openvino_predict():
         print("Time Slot:" + str(time_e2 - time_s2))
 
         input = new CTensor[float](&array[0], shape)
-        # free(array)
         print("Begin here")
         OpenVINOInferenceSupportive.predict(deref(model), deref(input))
         print("Predict successful")
+
+def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
+    # cdef ExecutableNetwork * model
+    cdef void* ptr = OpenVINOInferenceSupportive.loadOpenVINOIR(bytes(xml_path, encoding='utf8'), bytes(bin_path, encoding='utf8'), deviceType, batchSize)
+    model = <unsigned long> ptr
+    return model
