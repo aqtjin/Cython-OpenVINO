@@ -3,6 +3,7 @@
 # cython: language_level=3, boundscheck=False
 
 
+import time
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -11,8 +12,8 @@ from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from cython.operator cimport dereference as deref
 
-BATCH_SIZE = 1
-arr = np.random.randint(0, 255, size = [32, 3, 224, 224])
+BATCH_SIZE = 4
+arr = np.random.random_sample(size = [16, 3, 224, 224])
 
 ctypedef fused T:
     int
@@ -52,26 +53,27 @@ def openvino_predict():
     cdef ExecutableNetwork * model
     cdef int array_size = 1
     cdef vector[size_t] shape
-    cdef float * array
+    cdef float [::1] array
 
+    # Load Model
     model = OpenVINOInferenceSupportive.loadOpenVINOIR(model_path, model_bin, 0, 1)
+
+    # Create CTensor Shape
+    for s in arr[0:1*BATCH_SIZE].shape:
+        shape.push_back(s)
 
     print("Begin to prepare data")
     for i in range(arr.shape[0] // BATCH_SIZE):
         # From python array or ndarray to CTensor
-        array_size = 1
-        for s in arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].shape:
-            array_size *= s
-            shape.push_back(s)
-        print(shape)
-        print("Array size " + str(array_size))
-        array = <float *> malloc(array_size * sizeof(float))
+        time_s2 = time.time()
+        array = np.ascontiguousarray(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten(), dtype=np.single)
+        # for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
+        #     array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
+        time_e2 = time.time()
+        print("Time Slot:" + str(time_e2 - time_s2))
 
-        for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
-            array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
-
-        input = new CTensor[float](array, shape)
-        free(array)
+        input = new CTensor[float](&array[0], shape)
+        # free(array)
         print("Begin here")
         OpenVINOInferenceSupportive.predict(deref(model), deref(input))
         print("Predict successful")
