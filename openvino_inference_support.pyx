@@ -25,9 +25,6 @@ ctypedef fused T:
 ctypedef T * t_point
 ctypedef float * f_point
 
-cdef char* model_path = "/home/aqtjin/resnet_v1_50/resnet_v1_50.xml"
-cdef char* model_bin = "/home/aqtjin/resnet_v1_50/resnet_v1_50.bin"
-
 #cdef extern from "CTensor.hpp":
 cdef extern from "OpenVINOInferenceSupportive.hpp":
     cdef cppclass CTensor[T]:
@@ -45,7 +42,7 @@ cdef extern from "OpenVINOInferenceSupportive.hpp":
         @staticmethod
         ExecutableNetwork* loadOpenVINOIR(const string modelFilePath, const string weightFilePath, const int deviceType, const int batchSize)
         @staticmethod
-        CTensor[float] predict(ExecutableNetwork executable_network, CTensor[float] datatensor)
+        CTensor[float]* predictPTR(ExecutableNetwork executable_network, CTensor[float] datatensor)
 
 def openvino_predict(Loadedmodel):
     cdef CTensor[float] *input
@@ -73,7 +70,7 @@ def openvino_predict(Loadedmodel):
 
         input = new CTensor[float](&array[0], shape)
         print("Begin here")
-        OpenVINOInferenceSupportive.predict(deref(model), deref(input))
+        output = OpenVINOInferenceSupportive.predictPTR(deref(model), deref(input))
         print("Predict successful")
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
