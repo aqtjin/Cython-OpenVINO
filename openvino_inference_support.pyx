@@ -50,7 +50,7 @@ cdef pointer_to_numpy_array(void * ptr, np.npy_intp size):
         void PyArray_ENABLEFLAGS(np.ndarray arr, int flags)
     cdef np.ndarray[np.float, ndim=1] arr = \
             np.PyArray_SimpleNewFromData(1, &size, np.NPY_FLOAT32, ptr)
-    PyArray_ENABLEFLAGS(arr, np.OWNDATA)
+    PyArray_ENABLEFLAGS(arr, np.NPY_OWNDATA)
     return arr
 
 def openvino_predict(Loadedmodel, data):
@@ -81,7 +81,7 @@ def openvino_predict(Loadedmodel, data):
         input = new CTensor[float](&array[0], shape)
         print("Begin here")
         output = OpenVINOInferenceSupportive.predictPTR(deref(model), deref(input))
-        re = output.getData()
+        # re = output.getData()
         arr = pointer_to_numpy_array(re, 4)
         print("Predict successful")
 
