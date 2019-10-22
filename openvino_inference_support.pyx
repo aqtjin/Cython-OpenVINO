@@ -11,7 +11,10 @@ from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from cython.operator cimport dereference as deref
 
+np.import_array()
+
 BATCH_SIZE = 4
+IMAGE_TYPE = 1000
 
 ctypedef fused T:
     int
@@ -46,15 +49,15 @@ cdef extern from "OpenVINOInferenceSupportive.hpp":
         @staticmethod
         CTensor[float]* predictPTR(ExecutableNetwork executable_network, CTensor[float] datatensor)
 
-cdef pointer_to_numpy_array(void * ptr, np.npy_intp * dim):
+cdef pointer_to_numpy_array(void * ptr, np.npy_intp dim):
     '''Convert c pointer to numpy array.
     The memory will be freed as soon as the ndarray is deallocated.
     '''
     cdef extern from "numpy/arrayobject.h":
         void PyArray_ENABLEFLAGS(np.ndarray arr, int flags)
     print("Copying output")
-    cdef np.ndarray[np.float, ndim=1] arr = \
-            np.PyArray_SimpleNewFromData(1, dim, np.NPY_FLOAT32, ptr)
+    cdef np.ndarray[float, ndim=1] arr = \
+            np.PyArray_SimpleNewFromData(1, &dim, np.NPY_FLOAT32, ptr)
     print("Copying output")
     PyArray_ENABLEFLAGS(arr, np.NPY_OWNDATA)
     print("Copy successful")
@@ -66,12 +69,12 @@ def openvino_predict(Loadedmodel, data):
     cdef ExecutableNetwork * model
     cdef int array_size = 1
     cdef vector[size_t] shape
-    cdef float [::1] array
+    cdef float [::1] image
     cdef float * re
     cdef unsigned long ptr = Loadedmodel
-    cdef np.npy_intp dim[1]
+    cdef np.npy_intp dim
     cdef size_t output_size
-    dim[0] = <np.npy_intp> 4000
+
     model = <ExecutableNetwork *> ptr
     # Create CTensor Shape
     for s in data[0:1*BATCH_SIZE].shape:
@@ -81,29 +84,27 @@ def openvino_predict(Loadedmodel, data):
     for i in range(data.shape[0] // BATCH_SIZE):
         # From python array or ndarray to CTensor
         time_s2 = time.time()
-        array = np.ascontiguousarray(data[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten(), dtype=np.single)
+        image = np.ascontiguousarray(data[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten(), dtype=np.single)
         # for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
         #     array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
         time_e2 = time.time()
         print("Time Slot:" + str(time_e2 - time_s2))
 
-        input = new CTensor[float](&array[0], shape)
+        input = new CTensor[float](&image[0], shape)
         print("Begin here")
         output = OpenVINOInferenceSupportive.predictPTR(deref(model), deref(input))
-<<<<<<< HEAD
-        # re = output.getData()
-        arr = pointer_to_numpy_array(re, 4)
-=======
+
         re = deref(output).data
         output_size = deref(output).data_size
-        
-        for j in range(10):
-            print(re[j])
-        print(type(re[0]))
-        print(deref(output).data_size)
+
+        dim = <np.npy_intp> deref(output).data_size
+
         arr = pointer_to_numpy_array(<void *>re, dim)
-        print(arr)
->>>>>>> Fix return output from hpp
+
+        predict_re = []
+        for j in range(len(arr) // IMAGE_TYPE):
+            predict_re.append(np.argmax(arr[j*IMAGE_TYPE:(j+1)*IMAGE_TYPE]))
+        print(predict_re)
         print("Predict successful")
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
