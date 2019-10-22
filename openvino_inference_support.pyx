@@ -26,6 +26,10 @@ ctypedef float * f_point
 #cdef extern from "CTensor.hpp":
 cdef extern from "OpenVINOInferenceSupportive.hpp":
     cdef cppclass CTensor[T]:
+        T * data
+        vector[size_t] shape
+        size_t data_size
+
         CTensor(f_point _data, vector[size_t] _shape)
         CTensor(vector[size_t] _shape)
         void * getData()
@@ -42,15 +46,18 @@ cdef extern from "OpenVINOInferenceSupportive.hpp":
         @staticmethod
         CTensor[float]* predictPTR(ExecutableNetwork executable_network, CTensor[float] datatensor)
 
-cdef pointer_to_numpy_array(void * ptr, np.npy_intp size):
+cdef pointer_to_numpy_array(void * ptr, np.npy_intp * dim):
     '''Convert c pointer to numpy array.
     The memory will be freed as soon as the ndarray is deallocated.
     '''
     cdef extern from "numpy/arrayobject.h":
         void PyArray_ENABLEFLAGS(np.ndarray arr, int flags)
+    print("Copying output")
     cdef np.ndarray[np.float, ndim=1] arr = \
-            np.PyArray_SimpleNewFromData(1, &size, np.NPY_FLOAT32, ptr)
+            np.PyArray_SimpleNewFromData(1, dim, np.NPY_FLOAT32, ptr)
+    print("Copying output")
     PyArray_ENABLEFLAGS(arr, np.NPY_OWNDATA)
+    print("Copy successful")
     return arr
 
 def openvino_predict(Loadedmodel, data):
@@ -60,9 +67,11 @@ def openvino_predict(Loadedmodel, data):
     cdef int array_size = 1
     cdef vector[size_t] shape
     cdef float [::1] array
-    cdef void * re
-
+    cdef float * re
     cdef unsigned long ptr = Loadedmodel
+    cdef np.npy_intp dim[1]
+    cdef size_t output_size
+    dim[0] = <np.npy_intp> 4000
     model = <ExecutableNetwork *> ptr
     # Create CTensor Shape
     for s in data[0:1*BATCH_SIZE].shape:
@@ -81,8 +90,20 @@ def openvino_predict(Loadedmodel, data):
         input = new CTensor[float](&array[0], shape)
         print("Begin here")
         output = OpenVINOInferenceSupportive.predictPTR(deref(model), deref(input))
+<<<<<<< HEAD
         # re = output.getData()
         arr = pointer_to_numpy_array(re, 4)
+=======
+        re = deref(output).data
+        output_size = deref(output).data_size
+        
+        for j in range(10):
+            print(re[j])
+        print(type(re[0]))
+        print(deref(output).data_size)
+        arr = pointer_to_numpy_array(<void *>re, dim)
+        print(arr)
+>>>>>>> Fix return output from hpp
         print("Predict successful")
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):

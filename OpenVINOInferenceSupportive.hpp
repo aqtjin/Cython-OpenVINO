@@ -41,7 +41,7 @@ class OpenVINOInferenceSupportive
     static CTensor<float> predict(ExecutableNetwork executable_network, CTensor<float> datatensor);
 
     static CTensor<float>* predictPTR(ExecutableNetwork executable_network, CTensor<float> datatensor) {
-      CTensor<float> output = predict(executable_network, datatensor);
+      CTensor<float> &&output = predict(executable_network, datatensor);
       return &output;
     }
 
