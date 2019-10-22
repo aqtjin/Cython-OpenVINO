@@ -64,6 +64,7 @@ cdef pointer_to_numpy_array(void * ptr, np.npy_intp dim):
     return arr
 
 def openvino_predict(Loadedmodel, data):
+    time_s = time.time()
     cdef CTensor[float] *input
     cdef CTensor[float] *output
     cdef ExecutableNetwork * model
@@ -79,6 +80,7 @@ def openvino_predict(Loadedmodel, data):
     # Create CTensor Shape
     for s in data[0:1*BATCH_SIZE].shape:
         shape.push_back(s)
+
 
     print("Begin to prepare data")
     for i in range(data.shape[0] // BATCH_SIZE):
@@ -106,6 +108,8 @@ def openvino_predict(Loadedmodel, data):
             predict_re.append(np.argmax(arr[j*IMAGE_TYPE:(j+1)*IMAGE_TYPE]))
         print(predict_re)
         print("Predict successful")
+    time_e = time.time()
+    print("Time Slot:" + str(time_e - time_s))
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
     # cdef ExecutableNetwork * model
