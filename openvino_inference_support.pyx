@@ -89,13 +89,13 @@ def openvino_predict(Loadedmodel, data):
         image = np.ascontiguousarray(data[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten(), dtype=np.single)
         # for j in range(len(arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten())):
         #     array[j] = arr[i*BATCH_SIZE:(i+1)*BATCH_SIZE].flatten()[j]
-        time_e2 = time.time()
-        print("Time Slot:" + str(time_e2 - time_s2))
-
         input = new CTensor[float](&image[0], shape)
+        time_e2 = time.time()
+        print("*** Time Slot: input numpy->C++ %.2f ms", (time_e2 - time_s2) * 1000)
         print("Begin here")
         output = OpenVINOInferenceSupportive.predictPTR(deref(model), deref(input))
 
+        time_s3 = time.time()
         re = deref(output).data
         output_size = deref(output).data_size
 
@@ -107,9 +107,12 @@ def openvino_predict(Loadedmodel, data):
         for j in range(len(arr) // IMAGE_TYPE):
             predict_re.append(np.argmax(arr[j*IMAGE_TYPE:(j+1)*IMAGE_TYPE]))
         print(predict_re)
+        time_e3 = time.time()
+        print("*** Time Slot: output C++->numpy %.2f ms", (time_e3 - time_s3) * 1000)
+        print("*** Time Slot: Batch total " + str((time_e3 - time_s2) * 1000) + "ms")
         print("Predict successful")
     time_e = time.time()
-    print("Time Slot:" + str(time_e - time_s))
+    print("*** Time Slot: total predict time %.2f ms", (time_e - time_s) * 10000)
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
     # cdef ExecutableNetwork * model
