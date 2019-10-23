@@ -14,7 +14,6 @@ from cython.operator cimport dereference as deref
 np.import_array()
 
 BATCH_SIZE = 4
-IMAGE_TYPE = 1000
 
 ctypedef fused T:
     int
@@ -100,19 +99,21 @@ def openvino_predict(Loadedmodel, data):
         output_size = deref(output).data_size
 
         dim = <np.npy_intp> deref(output).data_size
+        sh = deref(output).shape
+        image_type = sh[1]
 
         arr = pointer_to_numpy_array(<void *>re, dim)
 
         predict_re = []
-        for j in range(len(arr) // IMAGE_TYPE):
-            predict_re.append(np.argmax(arr[j*IMAGE_TYPE:(j+1)*IMAGE_TYPE]))
+        for j in range(len(arr) // image_type):
+            predict_re.append(np.argmax(arr[j*image_type:(j+1)*image_type]))
         print(predict_re)
         time_e3 = time.time()
         print("*** Time Slot: output C++->numpy %.2f ms", (time_e3 - time_s3) * 1000)
         print("*** Time Slot: Batch total " + str((time_e3 - time_s2) * 1000) + "ms")
         print("Predict successful")
     time_e = time.time()
-    print("*** Time Slot: total predict time %.2f ms", (time_e - time_s) * 10000)
+    print("*** Time Slot: total predict time %.2f ms", (time_e - time_s) * 1000)
 
 def Load_OpenVINO_Model(xml_path, bin_path, deviceType, batchSize):
     # cdef ExecutableNetwork * model
